@@ -1,44 +1,74 @@
-# Import packages
+import pandas as pd
+import plotly.express as px
+from dash import Dash, dcc, html, Input, Output
 
-from dash import Dash, State, dcc, Input, Output
-import dash_bootstrap_components as dbc
-
-# Initialise the App
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server
-
-# Create app components
-markdown = dcc.Markdown(id='our-markdown', children='Text', style={'fontSize': 24})
-selector = dcc.RadioItems(id='our-colorselector',
-                            options=[
-                                {'label': 'Red', 'value': 'red'},
-                                {'label': 'Green', 'value': 'green'},
-                                {'label': 'Blue', 'value': 'blue'}
-                            ], value='red')
-
-# App Layout
-app.layout = dbc.Container(
-    [
-        dbc.Row([dbc.Col([markdown], width=8)]),
-        dbc.Row(
-            [
-                dbc.Col([selector], width=9),
-            ]
-        ),
-    ]
+# CSV laden
+df = pd.read_csv(
+    "immigrati_00003_stranieri_seriecittaprovenienza (1).csv",
+    sep=";",
+    encoding="latin-1"
 )
 
-# Callbacks
+# Numeriek maken
+df["Numero Immigrati"] = pd.to_numeric(df["Numero Immigrati"], errors="coerce")
+
+# Pivot tabel
+df_pivot = df.pivot_table(
+    index="Anno",
+    columns="Cittadinanza",
+    values="Numero Immigrati",
+    aggfunc="sum",
+    fill_value=0
+)
+
+years = df_pivot.index.tolist()
+
+# Dash app maken
+app = Dash(__name__)
+
+app.layout = html.Div([
+    
+    html.H1("Aantal immigranten per land"),
+
+    # Slider voor jaar
+    dcc.Slider(
+        min=min(years),
+        max=max(years),
+        step=1,
+        value=min(years),
+        marks={int(year): str(year) for year in years[::2]},
+        id="year-slider"
+    ),
+
+    # Grafiek
+    dcc.Graph(id="bar-chart")
+])
+
+# Callback: update grafiek
 @app.callback(
-    Output(component_id='our-markdown', component_property='style'),
-    Input(component_id='our-colorselector', component_property='value'),
-    State(component_id='our-markdown', component_property='style')
+    Output("bar-chart", "figure"),
+    Input("year-slider", "value")
 )
-def update_markdown(value_selector, current_style):
-    style = current_style.copy()
-    style['color'] = value_selector
-    return style
+def update_graph(selected_year):
 
-# Run the App
-if __name__ == '__main__':
-    app.run(debug=False)
+    data = df_pivot.loc[selected_year].sort_values(ascending=False).head(10)
+
+    fig = px.bar(
+        x=data.values,
+        y=data.index,
+        orientation='h',
+        text=data.values,
+        title=f"Aantal immigranten - {selected_year}"
+    )
+
+    fig.update_layout(
+        xaxis_title="Aantal immigranten",
+        yaxis_title="Land",
+        yaxis=dict(autorange="reversed")  # grootste bovenaan
+    )
+
+    return fig
+
+# Run app
+if __name__ == "__main__":
+    app.run(debug=True)
