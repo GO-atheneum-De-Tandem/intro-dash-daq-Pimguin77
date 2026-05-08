@@ -3,7 +3,9 @@ import plotly.express as px
 from dash import Dash, dcc, html, Input, Output
 
 # CSV rechtstreeks van GitHub lezen
-url = "url = "https://raw.githubusercontent.com/GO-atheneum-De-Tandem/intro-dash-daq-Pimguin77/refs/heads/master/immigrati_00003_stranieri_seriecittaprovenienza%20(1).csv""
+import pandas as pd
+
+url = "https://raw.githubusercontent.com/GO-atheneum-De-Tandem/intro-dash-daq-Pimguin77/refs/heads/master/immigrati_00003_stranieri_seriecittaprovenienza%20(1).csv"
 
 df = pd.read_csv(
     url,
